@@ -119,7 +119,8 @@
       transition: transform .15s ease, box-shadow .15s ease; outline: none;
     }
     .ramo:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,.12); }
-    .ramo:focus { outline: 2px dashed currentColor; outline-offset: 2px; }
+    .ramo:focus { outline: none; }
+    .ramo:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 10px; }
     .ramo[data-area="programacion"] { border-left-color: var(--programacion); }
     .ramo[data-area="matematicas"] { border-left-color: var(--matematicas); }
     .ramo[data-area="fisica"] { border-left-color: var(--fisica); }
@@ -129,12 +130,14 @@
     .ramo[data-area="fofu"] { border-left-color: var(--fofu); }
 
     /* Tooltip SOLO CSS (desktop: hover/focus) */
+    @media (hover: hover) and (pointer: fine) {
     .ramo:hover::after, .ramo:focus::after {
       content: attr(data-tooltip);
       position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
       background: #333; color:#fff; padding: 8px 12px; border-radius: 8px; font-size: 12px;
       white-space: pre-wrap; opacity:.98; pointer-events:none; z-index:9999; max-width: 320px; text-align:center;
       box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    }
     }
 
     .ramo .ramo-nombre { font-weight:600; margin-bottom:4px; }
@@ -538,8 +541,8 @@
             div.removeAttribute('aria-disabled');
             setTooltip(`🟢 Aprobado
 Toca para desmarcar ❌`);
-            div.onclick = () => aprobar(ramo);
-            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
+            div.onclick = () => { try { hideTip(); } catch(_){} aprobar(ramo); };
+            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { hideTip(); } catch(_){} aprobar(ramo); } };
           } else if (estaDisponible(ramo)) {
             div.classList.add('disponible');
             div.setAttribute('aria-pressed','false');
@@ -547,8 +550,8 @@ Toca para desmarcar ❌`);
             if (!estadoAnterior.get(estadoKey)) { div.classList.add('desbloqueado'); void div.offsetWidth; }
             setTooltip(`🟡 Disponible
 Toca para aprobar ✅`);
-            div.onclick = () => aprobar(ramo);
-            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
+            div.onclick = () => { try { hideTip(); } catch(_){} aprobar(ramo); };
+            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { hideTip(); } catch(_){} aprobar(ramo); } };
           } else {
             div.classList.add('bloqueado');
             div.setAttribute('aria-disabled','true');

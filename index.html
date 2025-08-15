@@ -138,7 +138,7 @@
       white-space: pre-wrap; opacity:.98; pointer-events:none; z-index:9999; max-width: 320px; text-align:center;
       box-shadow: 0 6px 16px rgba(0,0,0,.35);
     
-  width: min(var(--box-w, 320px), calc(100vw - 24px));
+  width: min(var(--box-w, 320px), var(--tip-max-w, 420px), calc(100vw - 24px));
   white-space: normal;
   line-height: 1.2;
 }
@@ -588,7 +588,7 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
     };
 
     // ========= Touch tooltips (long-press) =========
-    const CONFIG = { longPressMs: 10, tooltipHideMs: 2500, moveTolPx: 12 };
+    const CONFIG = { longPressMs: 500, tooltipHideMs: 2500, moveTolPx: 12, tipMaxPx: 420, tipMinPx: 140 };
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const tip = document.getElementById('touch-tip');
     let pressTimer = null;
@@ -700,6 +700,7 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
     document.getElementById('btn-reset').addEventListener('click', resetear);
 
     // Marcar 'Todas' activa por defecto
+    document.documentElement.style.setProperty('--tip-max-w', (CONFIG.tipMaxPx||420) + 'px');
 
 // >>> Sync CSS var --box-w to each card's current width (for desktop CSS tooltip sizing)
 function setCardWidthVars(){
@@ -739,4 +740,3 @@ window.addEventListener('scroll', () => {
 </script>
 </body>
 </html>
-

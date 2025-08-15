@@ -29,6 +29,9 @@
       --humanidades: #f6b26b;
       --optativos: #d5a6bd;
       --fofu: #40E0D0;
+
+      /* Config global de ancho máximo del tooltip */
+      --tip-max-w: 420px;
     }
 
     * { box-sizing: border-box; }
@@ -133,7 +136,12 @@
       content: attr(data-tooltip);
       position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
       background: #333; color:#fff; padding: 8px 12px; border-radius: 8px; font-size: 12px;
-      white-space: pre-wrap; opacity:.98; pointer-events:none; z-index:9999; max-width: 320px; text-align:center;
+      white-space: pre-wrap; opacity:.98; pointer-events:none; z-index:9999;
+      /* Nuevo sizing responsivo/clamp */
+      width: min(var(--box-w, 320px), var(--tip-max-w, 420px), calc(100vw - 24px));
+      max-width: none;
+      box-sizing: border-box;
+      text-align:center;
       box-shadow: 0 6px 16px rgba(0,0,0,.35);
     }
 
@@ -194,37 +202,36 @@
       border-radius: 10px;
       box-shadow: 0 8px 18px rgba(0,0,0,.35);
       z-index: 10000;
-      max-width: min(80vw, 360px);
+      /* width la maneja JS con clamp; evitamos límites aquí */
+      max-width: none;
       display: none;
       white-space: pre-wrap;
       transform: translate(-50%, -8px);
       pointer-events: none;
+      box-sizing: border-box;
+      text-align: center;
     }
-  :root{ --tip-max-w: 420px; }
 
-/* Improve touch UX on course tiles */
-.ramo{
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  user-select: none;
-  touch-action: manipulation;
-}
+    /* Improve touch UX on course tiles */
+    .ramo{
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
 
+    /* Robust focus styling (no dotted rings on click) */
+    .ramo:focus { outline: none !important; }
+    .ramo:focus:not(:focus-visible) { outline: none !important; }
+    .ramo:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 3px !important; border-radius: 10px; }
 
-/* Robust focus styling (no dotted rings on click) */
-.ramo:focus { outline: none !important; }
-.ramo:focus:not(:focus-visible) { outline: none !important; }
-.ramo:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 3px !important; border-radius: 10px; }
-
-
-/* Avoid CSS+JS tooltip duplication */
-@media (hover: hover) and (pointer: fine) {
-  html[data-jstip="1"] .ramo:hover::after,
-  html[data-jstip="1"] .ramo:focus::after,
-  html[data-touch="1"] .ramo:hover::after { content: none !important; }
-}
-
-</style>
+    /* Avoid CSS+JS tooltip duplication */
+    @media (hover: hover) and (pointer: fine) {
+      html[data-jstip="1"] .ramo:hover::after,
+      html[data-jstip="1"] .ramo:focus::after,
+      html[data-touch="1"] .ramo:hover::after { content: none !important; }
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -291,9 +298,22 @@
 
   <script>
     // ========= Utilidades =========
-    const normalizarTexto = (str) => (str || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
+    const normalizarTexto = (str) => (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    const cssVarPx = (name, fallback) => {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    // ========= Config (punto único para ajustar tooltip) =========
+    const CONFIG = {
+      tipMinW: 140,                 // min px en móvil
+      tipMaxW: null,                // si null, toma --tip-max-w o 420
+      tapMs: 140,                   // (no tocado) umbral "scroll-hover" móvil
+      moveHoverThrottleMs: 400      // (no tocado) throttling de hover al mover el dedo
+    };
 
     // ========= Modo Oscuro persistente =========
     const toggle = document.getElementById("theme-toggle");
@@ -482,6 +502,13 @@
     };
 
     // ========= Render =========
+    const syncBoxWidths = () => {
+      $$('.ramo').forEach(el => {
+        const w = Math.round(el.getBoundingClientRect().width);
+        el.style.setProperty('--box-w', w + 'px');
+      });
+    };
+
     const render = () => {
       const totalRamos = Object.keys(ramos).length;
       const aprobadosList = aprobadosNombres();
@@ -558,19 +585,22 @@
 
           if (aprobadoPorNombre.has(ramo)) {
             div.classList.add('aprobado');
-            setTooltip(`🟢 Aprobado (${creditosRamos[ramo] ?? 4} créditos)\nToca para desmarcar ❌`);
+            // *** SIN créditos en tooltip ***
+            setTooltip(`🟢 Aprobado\nToca para desmarcar ❌`);
             div.onclick = () => aprobar(ramo);
             div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
           } else if (estaDisponible(ramo)) {
             div.classList.add('disponible');
             if (!estadoAnterior.get(estadoKey)) { div.classList.add('desbloqueado'); void div.offsetWidth; }
-            setTooltip(`🟡 Disponible (${creditosRamos[ramo] ?? 4} créditos)\nToca para aprobar ✅`);
+            // *** SIN créditos en tooltip ***
+            setTooltip(`🟡 Disponible\nToca para aprobar ✅`);
             div.onclick = () => aprobar(ramo);
             div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
           } else {
             div.classList.add('bloqueado');
             const faltantes = prere.filter(p => !aprobadoPorNombre.has(p));
-            setTooltip(`🔒 Bloqueado (${creditosRamos[ramo] ?? 4} créditos)\nRequiere: ${faltantes.join(', ') || 'Ninguno'}`);
+            // *** SIN créditos en tooltip ***
+            setTooltip(`🔒 Bloqueado\nRequiere: ${faltantes.join(', ') || 'Ninguno'}`);
           }
 
           cont.appendChild(div);
@@ -590,6 +620,9 @@
       estadoAnterior.clear();
       nuevoEstado.forEach((v,k) => estadoAnterior.set(k, v));
 
+      // Sincroniza el ancho del card para el clamp del tooltip CSS (desktop)
+      requestAnimationFrame(syncBoxWidths);
+
       // Re-wire touch tooltip handlers after each render
       setupTouchTooltips();
     };
@@ -602,17 +635,34 @@
     let startX = 0, startY = 0;
     const MOVE_TOL = 12; // px
     const LONG_MS = 500; // ms to trigger
+    let touchStartAt = 0;
 
     function showTipFor(target) {
       const txt = target.getAttribute('data-tooltip');
       if (!txt) return;
+
+      // Clamp de ancho en móvil (≈ card, con límites y clamp a viewport)
+      const boxW = target.getBoundingClientRect().width;
+      const maxFromCss = cssVarPx('--tip-max-w', 420);
+      const maxPx = (CONFIG.tipMaxW ?? maxFromCss) || 420;
+      const vwClamp = Math.max(0, window.innerWidth - 24);
+      let w = Math.min(boxW, maxPx, vwClamp);
+      w = Math.max(CONFIG.tipMinW, w);
+      tip.style.width = Math.round(w) + 'px';
+
       tip.textContent = txt;
       tip.style.display = 'block';
       positionTip(target);
       clearTimeout(tip._hideT); tip._hideT = setTimeout(hideTip, 2500);
     }
+
     function hideTip() {
-  try { delete document.documentElement.dataset.jstip; } catch(_){} tip.style.display = 'none'; tip.textContent = ''; }
+      try { delete document.documentElement.dataset.jstip; } catch(_) {}
+      tip.style.display = 'none';
+      tip.textContent = '';
+      tip.style.width = 'auto';
+    }
+
     function positionTip(target) {
       const rect = target.getBoundingClientRect();
       const tipRect = tip.getBoundingClientRect();
@@ -627,12 +677,14 @@
       tip.style.left = x + 'px';
       tip.style.top = y + 'px';
     }
+
     function clearPress() { clearTimeout(pressTimer); pressTimer = null; pressTarget = null; }
     function onTouchStart(e){
-        try { document.documentElement.dataset.touch = '1'; } catch(_){}
-        window.clearTimeout(window.__touchFlagT);
-        window.__touchFlagT = setTimeout(() => { try { delete document.documentElement.dataset.touch; } catch(_){} }, 1500);
-        touchStartAt = Date.now();
+      try { document.documentElement.dataset.touch = '1'; } catch(_){}
+      window.clearTimeout(window.__touchFlagT);
+      window.__touchFlagT = setTimeout(() => { try { delete document.documentElement.dataset.touch; } catch(_){} }, 1500);
+      touchStartAt = Date.now();
+
       const t = e.target.closest('.ramo');
       if (!t) return;
       pressTarget = t;
@@ -649,7 +701,7 @@
       }
     }
     function onTouchEnd(e){
-        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
       if (pressTimer) { clearPress(); }
     }
     function onScrollOrOutsideTouch() { hideTip(); }
@@ -669,8 +721,8 @@
       document.addEventListener('touchstart', (e)=>{
         if (!e.target.closest('.ramo')) hideTip();
       }, {passive:true, capture:true});
-      window.addEventListener('resize', hideTip);
-      window.addEventListener('orientationchange', hideTip);
+      window.addEventListener('resize', () => { hideTip(); syncBoxWidths(); });
+      window.addEventListener('orientationchange', () => { hideTip(); syncBoxWidths(); });
     }
 
     // ========= Listeners =========
@@ -710,25 +762,27 @@
 
     // Primera pinta
     render();
-  // >>> Mobile 'scroll-hover' tooltip (show while finger passes over cards) <<<
-let _lastTipEl = null, _lastTipAt = 0;
-document.addEventListener('touchmove', (e) => {
-  const t = e.touches && e.touches[0];
-  if (!t) return;
-  const now = Date.now();
-  if ((now - (touchStartAt || 0)) < (CONFIG.tapMs || 140)) return;
-  const el = document.elementFromPoint(t.clientX, t.clientY)?.closest('.ramo');
-  if (!el) return;
-  if (el === _lastTipEl && (now - _lastTipAt) < (CONFIG.moveHoverThrottleMs || 400)) return;
-  if (typeof pressTimer !== 'undefined' && pressTimer) { return; }
-  try { showTipFor(el); } catch(_) {}
-  _lastTipEl = el; _lastTipAt = now;
-}, { passive: true });
-let _scrollEndT = null;
-window.addEventListener('scroll', () => {
-  clearTimeout(_scrollEndT);
-  _scrollEndT = setTimeout(() => { try { hideTip(); } catch(_){} }, 120);
-}, { passive: true });
-</script>
+
+    // >>> Mobile 'scroll-hover' tooltip (show while finger passes over cards) <<<
+    let _lastTipEl = null, _lastTipAt = 0;
+    document.addEventListener('touchmove', (e) => {
+      const t = e.touches && e.touches[0];
+      if (!t) return;
+      const now = Date.now();
+      if ((now - (touchStartAt || 0)) < (CONFIG.tapMs || 140)) return;
+      const el = document.elementFromPoint(t.clientX, t.clientY)?.closest('.ramo');
+      if (!el) return;
+      if (el === _lastTipEl && (now - _lastTipAt) < (CONFIG.moveHoverThrottleMs || 400)) return;
+      if (typeof pressTimer !== 'undefined' && pressTimer) { return; }
+      try { showTipFor(el); } catch(_) {}
+      _lastTipEl = el; _lastTipAt = now;
+    }, { passive: true });
+
+    let _scrollEndT = null;
+    window.addEventListener('scroll', () => {
+      clearTimeout(_scrollEndT);
+      _scrollEndT = setTimeout(() => { try { hideTip(); } catch(_){} }, 120);
+    }, { passive: true });
+  </script>
 </body>
 </html>

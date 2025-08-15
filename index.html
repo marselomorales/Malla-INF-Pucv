@@ -312,7 +312,8 @@
       tipMinW: 140,                 // min px en móvil
       tipMaxW: null,                // si null, toma --tip-max-w o 420
       tapMs: 140,                   // (no tocado) umbral "scroll-hover" móvil
-      moveHoverThrottleMs: 400      // (no tocado) throttling de hover al mover el dedo
+      moveHoverThrottleMs: 400,      // (no tocado) throttling de hover al mover el dedo
+      tipLongPress: false,     //desactiva long-press en móvil
     };
 
     // ========= Modo Oscuro persistente =========
@@ -691,7 +692,9 @@
       const touch = e.changedTouches[0];
       startX = touch.clientX; startY = touch.clientY;
       clearPress();
-      pressTimer = setTimeout(() => { showTipFor(t); }, LONG_MS);
+      if (CONFIG.tipLongPress) {
+                       pressTimer = setTimeout(() => { showTipFor(t); }, LONG_MS);
+                 }
     }
     function onTouchMove(e) {
       if (!pressTimer) return;

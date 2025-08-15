@@ -119,8 +119,7 @@
       transition: transform .15s ease, box-shadow .15s ease; outline: none;
     }
     .ramo:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,.12); }
-    .ramo:focus { outline: none; }
-    .ramo:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 10px; }
+    .ramo:focus { outline: 2px dashed currentColor; outline-offset: 2px; }
     .ramo[data-area="programacion"] { border-left-color: var(--programacion); }
     .ramo[data-area="matematicas"] { border-left-color: var(--matematicas); }
     .ramo[data-area="fisica"] { border-left-color: var(--fisica); }
@@ -130,19 +129,13 @@
     .ramo[data-area="fofu"] { border-left-color: var(--fofu); }
 
     /* Tooltip SOLO CSS (desktop: hover/focus) */
-    @media (hover: hover) and (pointer: fine) {
-.ramo:hover::after, .ramo:focus::after {
+    .ramo:hover::after, .ramo:focus::after {
       content: attr(data-tooltip);
       position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
       background: #333; color:#fff; padding: 8px 12px; border-radius: 8px; font-size: 12px;
       white-space: pre-wrap; opacity:.98; pointer-events:none; z-index:9999; max-width: 320px; text-align:center;
       box-shadow: 0 6px 16px rgba(0,0,0,.35);
-    
-  width: min(var(--box-w, 320px), var(--tip-max-w, 420px), calc(100vw - 24px));
-  white-space: normal;
-  line-height: 1.2;
-}
-}
+    }
 
     .ramo .ramo-nombre { font-weight:600; margin-bottom:4px; }
     .ramo .ramo-detalles { display:flex; justify-content:space-between; font-size:12px; gap:8px; }
@@ -207,7 +200,16 @@
       transform: translate(-50%, -8px);
       pointer-events: none;
     }
-  #tip{ position:fixed; z-index:9999; padding:10px 12px; border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.2);} 
+  :root{ --tip-max-w: 420px; }
+
+/* Improve touch UX on course tiles */
+.ramo{
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
 </style>
 </head>
 <body>
@@ -275,7 +277,7 @@
 
   <script>
     // ========= Utilidades =========
-    const normalizarTexto = (str) => (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const normalizarTexto = (str) => (str || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -542,28 +544,19 @@
 
           if (aprobadoPorNombre.has(ramo)) {
             div.classList.add('aprobado');
-            div.setAttribute('aria-pressed','true');
-            div.removeAttribute('aria-disabled');
-            setTooltip(`🟢 Aprobado
-Toca para desmarcar ❌`);
-            div.onclick = () => { try { hideTip(); } catch(_){} aprobar(ramo); };
-            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { hideTip(); } catch(_){} aprobar(ramo); } };
+            setTooltip(`🟢 Aprobado (${creditosRamos[ramo] ?? 4} créditos)\nToca para desmarcar ❌`);
+            div.onclick = () => aprobar(ramo);
+            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
           } else if (estaDisponible(ramo)) {
             div.classList.add('disponible');
-            div.setAttribute('aria-pressed','false');
-            div.removeAttribute('aria-disabled');
             if (!estadoAnterior.get(estadoKey)) { div.classList.add('desbloqueado'); void div.offsetWidth; }
-            setTooltip(`🟡 Disponible
-Toca para aprobar ✅`);
-            div.onclick = () => { try { hideTip(); } catch(_){} aprobar(ramo); };
-            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { hideTip(); } catch(_){} aprobar(ramo); } };
+            setTooltip(`🟡 Disponible (${creditosRamos[ramo] ?? 4} créditos)\nToca para aprobar ✅`);
+            div.onclick = () => aprobar(ramo);
+            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
           } else {
             div.classList.add('bloqueado');
-            div.setAttribute('aria-disabled','true');
-            div.removeAttribute('aria-pressed');
             const faltantes = prere.filter(p => !aprobadoPorNombre.has(p));
-            setTooltip(`🔒 Bloqueado
-Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
+            setTooltip(`🔒 Bloqueado (${creditosRamos[ramo] ?? 4} créditos)\nRequiere: ${faltantes.join(', ') || 'Ninguno'}`);
           }
 
           cont.appendChild(div);
@@ -588,15 +581,13 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
     };
 
     // ========= Touch tooltips (long-press) =========
-    const CONFIG = { longPressMs: 500, tooltipHideMs: 2500, moveTolPx: 12, tipMaxPx: 420, tipMinPx: 140 };
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const tip = document.getElementById('touch-tip');
     let pressTimer = null;
     let pressTarget = null;
-    let longPressActiva = false;
     let startX = 0, startY = 0;
-    const MOVE_TOL = CONFIG.moveTolPx; // px
-    const LONG_MS = CONFIG.longPressMs; // ms to trigger
+    const MOVE_TOL = 12; // px
+    const LONG_MS = 500; // ms to trigger
 
     function showTipFor(target) {
       const txt = target.getAttribute('data-tooltip');
@@ -604,14 +595,13 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
       tip.textContent = txt;
       tip.style.display = 'block';
       positionTip(target);
-      clearTimeout(tip._hideT); tip._hideT = setTimeout(hideTip, CONFIG.tooltipHideMs);
+      clearTimeout(tip._hideT); tip._hideT = setTimeout(hideTip, 2500);
     }
     function hideTip() { tip.style.display = 'none'; tip.textContent = ''; }
     function positionTip(target) {
       const rect = target.getBoundingClientRect();
       const tipRect = tip.getBoundingClientRect();
       let x = rect.left + rect.width/2;
-      x = Math.min(window.innerWidth - 12, Math.max(12, x));
       let y = rect.top - 8; // above by default
       if (rect.top - tipRect.height - 16 < 0) {
         y = rect.bottom + tipRect.height/2 + 8;
@@ -623,14 +613,15 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
       tip.style.top = y + 'px';
     }
     function clearPress() { clearTimeout(pressTimer); pressTimer = null; pressTarget = null; }
-    function onTouchStart(e) {
+    function onTouchStart(e){
+        touchStartAt = Date.now();
       const t = e.target.closest('.ramo');
       if (!t) return;
       pressTarget = t;
       const touch = e.changedTouches[0];
       startX = touch.clientX; startY = touch.clientY;
       clearPress();
-      pressTimer = setTimeout(() => { longPressActiva = true; showTipFor(t); }, LONG_MS);
+      pressTimer = setTimeout(() => { showTipFor(t); }, LONG_MS);
     }
     function onTouchMove(e) {
       if (!pressTimer) return;
@@ -639,7 +630,8 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
         clearPress();
       }
     }
-    function onTouchEnd(e) {
+    function onTouchEnd(e){
+        if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
       if (pressTimer) { clearPress(); }
     }
     function onScrollOrOutsideTouch() { hideTip(); }
@@ -650,7 +642,7 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
       document.removeEventListener('touchmove', onTouchMove, {passive:true});
       document.removeEventListener('touchend', onTouchEnd, {passive:true});
       document.removeEventListener('scroll', onScrollOrOutsideTouch, true);
-      
+      document.removeEventListener('touchstart', (ev)=>{}, true);
 
       document.addEventListener('touchstart', onTouchStart, {passive:true});
       document.addEventListener('touchmove', onTouchMove, {passive:true});
@@ -661,7 +653,6 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
       }, {passive:true, capture:true});
       window.addEventListener('resize', hideTip);
       window.addEventListener('orientationchange', hideTip);
-      document.addEventListener('click', (e)=>{ if (longPressActiva) { longPressActiva=false; e.stopPropagation(); e.preventDefault(); } }, true);
     }
 
     // ========= Listeners =========
@@ -699,39 +690,22 @@ Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
 
     document.getElementById('btn-reset').addEventListener('click', resetear);
 
-    // Marcar 'Todas' activa por defecto
-    document.documentElement.style.setProperty('--tip-max-w', (CONFIG.tipMaxPx||420) + 'px');
-
-// >>> Sync CSS var --box-w to each card's current width (for desktop CSS tooltip sizing)
-function setCardWidthVars(){
-  document.querySelectorAll('.ramo').forEach(d=>{
-    const r = d.getBoundingClientRect();
-    d.style.setProperty('--box-w', r.width + 'px');
-  });
-}
-window.addEventListener('resize', () => requestAnimationFrame(setCardWidthVars));
-
-    document.querySelector('.area-btn[data-area="all"]')?.classList.add('active');
-
     // Primera pinta
     render();
-    requestAnimationFrame(setCardWidthVars);
-  
-// >>> Mobile 'scroll-hover' tooltip (show while finger passes over cards) <<<
+  // >>> Mobile 'scroll-hover' tooltip (show while finger passes over cards) <<<
 let _lastTipEl = null, _lastTipAt = 0;
 document.addEventListener('touchmove', (e) => {
   const t = e.touches && e.touches[0];
   if (!t) return;
-  const el = document.elementFromPoint(t.clientX, t.clientY)?.closest('.ramo');
   const now = Date.now();
+  if ((now - (touchStartAt || 0)) < (CONFIG.tapMs || 140)) return;
+  const el = document.elementFromPoint(t.clientX, t.clientY)?.closest('.ramo');
   if (!el) return;
-  if (el === _lastTipEl && (now - _lastTipAt) < 500) return; // throttle
-  // Avoid interfering with long-press
+  if (el === _lastTipEl && (now - _lastTipAt) < (CONFIG.moveHoverThrottleMs || 400)) return;
   if (typeof pressTimer !== 'undefined' && pressTimer) { return; }
   try { showTipFor(el); } catch(_) {}
   _lastTipEl = el; _lastTipAt = now;
 }, { passive: true });
-// Hide tooltip on scroll end shortly after
 let _scrollEndT = null;
 window.addEventListener('scroll', () => {
   clearTimeout(_scrollEndT);

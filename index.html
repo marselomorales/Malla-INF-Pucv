@@ -267,7 +267,7 @@
 
   <script>
     // ========= Utilidades =========
-    const normalizarTexto = (str) => (str || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
+    const normalizarTexto = (str) => (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -534,19 +534,28 @@
 
           if (aprobadoPorNombre.has(ramo)) {
             div.classList.add('aprobado');
-            setTooltip(`🟢 Aprobado (${creditosRamos[ramo] ?? 4} créditos)\nToca para desmarcar ❌`);
+            div.setAttribute('aria-pressed','true');
+            div.removeAttribute('aria-disabled');
+            setTooltip(`🟢 Aprobado
+Toca para desmarcar ❌`);
             div.onclick = () => aprobar(ramo);
             div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
           } else if (estaDisponible(ramo)) {
             div.classList.add('disponible');
+            div.setAttribute('aria-pressed','false');
+            div.removeAttribute('aria-disabled');
             if (!estadoAnterior.get(estadoKey)) { div.classList.add('desbloqueado'); void div.offsetWidth; }
-            setTooltip(`🟡 Disponible (${creditosRamos[ramo] ?? 4} créditos)\nToca para aprobar ✅`);
+            setTooltip(`🟡 Disponible
+Toca para aprobar ✅`);
             div.onclick = () => aprobar(ramo);
             div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
           } else {
             div.classList.add('bloqueado');
+            div.setAttribute('aria-disabled','true');
+            div.removeAttribute('aria-pressed');
             const faltantes = prere.filter(p => !aprobadoPorNombre.has(p));
-            setTooltip(`🔒 Bloqueado (${creditosRamos[ramo] ?? 4} créditos)\nRequiere: ${faltantes.join(', ') || 'Ninguno'}`);
+            setTooltip(`🔒 Bloqueado
+Requiere: ${faltantes.join(', ') || 'Ninguno'}`);
           }
 
           cont.appendChild(div);
@@ -571,13 +580,15 @@
     };
 
     // ========= Touch tooltips (long-press) =========
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const CONFIG = { longPressMs: 500, tooltipHideMs: 2500, moveTolPx: 12 };
+const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const tip = document.getElementById('touch-tip');
     let pressTimer = null;
     let pressTarget = null;
+    let longPressActiva = false;
     let startX = 0, startY = 0;
-    const MOVE_TOL = 12; // px
-    const LONG_MS = 500; // ms to trigger
+        const MOVE_TOL = CONFIG.moveTolPx; // px
+        const LONG_MS = CONFIG.longPressMs; // ms
 
     function showTipFor(target) {
       const txt = target.getAttribute('data-tooltip');
@@ -585,13 +596,14 @@
       tip.textContent = txt;
       tip.style.display = 'block';
       positionTip(target);
-      clearTimeout(tip._hideT); tip._hideT = setTimeout(hideTip, 2500);
+      clearTimeout(tip._hideT); tip._hideT = setTimeout(hideTip, CONFIG.tooltipHideMs);
     }
     function hideTip() { tip.style.display = 'none'; tip.textContent = ''; }
     function positionTip(target) {
       const rect = target.getBoundingClientRect();
       const tipRect = tip.getBoundingClientRect();
       let x = rect.left + rect.width/2;
+      x = Math.min(window.innerWidth - 12, Math.max(12, x));
       let y = rect.top - 8; // above by default
       if (rect.top - tipRect.height - 16 < 0) {
         y = rect.bottom + tipRect.height/2 + 8;
@@ -610,7 +622,7 @@
       const touch = e.changedTouches[0];
       startX = touch.clientX; startY = touch.clientY;
       clearPress();
-      pressTimer = setTimeout(() => { showTipFor(t); }, LONG_MS);
+      pressTimer = setTimeout(() => { longPressActiva = true; showTipFor(t); }, LONG_MS);
     }
     function onTouchMove(e) {
       if (!pressTimer) return;
@@ -630,7 +642,7 @@
       document.removeEventListener('touchmove', onTouchMove, {passive:true});
       document.removeEventListener('touchend', onTouchEnd, {passive:true});
       document.removeEventListener('scroll', onScrollOrOutsideTouch, true);
-      document.removeEventListener('touchstart', (ev)=>{}, true);
+      
 
       document.addEventListener('touchstart', onTouchStart, {passive:true});
       document.addEventListener('touchmove', onTouchMove, {passive:true});
@@ -640,7 +652,9 @@
         if (!e.target.closest('.ramo')) hideTip();
       }, {passive:true, capture:true});
       window.addEventListener('resize', hideTip);
-      window.addEventListener('orientationchange', hideTip);
+      
+      // Cancel click after a long-press tooltip
+      document.addEventListener('click', (e)=>{ if (longPressActiva) { longPressActiva=false; e.stopPropagation(); e.preventDefault(); } }, true);window.addEventListener('orientationchange', hideTip);
     }
 
     // ========= Listeners =========
@@ -677,6 +691,9 @@
     });
 
     document.getElementById('btn-reset').addEventListener('click', resetear);
+
+    // Marcar 'Todas' activa por defecto
+    document.querySelector('.area-btn[data-area="all"]')?.classList.add('active');
 
     // Primera pinta
     render();

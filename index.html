@@ -210,6 +210,20 @@
   touch-action: manipulation;
 }
 
+
+/* Robust focus styling (no dotted rings on click) */
+.ramo:focus { outline: none !important; }
+.ramo:focus:not(:focus-visible) { outline: none !important; }
+.ramo:focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 3px !important; border-radius: 10px; }
+
+
+/* Avoid CSS+JS tooltip duplication */
+@media (hover: hover) and (pointer: fine) {
+  html[data-jstip="1"] .ramo:hover::after,
+  html[data-jstip="1"] .ramo:focus::after,
+  html[data-touch="1"] .ramo:hover::after { content: none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -597,7 +611,8 @@
       positionTip(target);
       clearTimeout(tip._hideT); tip._hideT = setTimeout(hideTip, 2500);
     }
-    function hideTip() { tip.style.display = 'none'; tip.textContent = ''; }
+    function hideTip() {
+  try { delete document.documentElement.dataset.jstip; } catch(_){} tip.style.display = 'none'; tip.textContent = ''; }
     function positionTip(target) {
       const rect = target.getBoundingClientRect();
       const tipRect = tip.getBoundingClientRect();
@@ -614,6 +629,9 @@
     }
     function clearPress() { clearTimeout(pressTimer); pressTimer = null; pressTarget = null; }
     function onTouchStart(e){
+        try { document.documentElement.dataset.touch = '1'; } catch(_){}
+        window.clearTimeout(window.__touchFlagT);
+        window.__touchFlagT = setTimeout(() => { try { delete document.documentElement.dataset.touch; } catch(_){} }, 1500);
         touchStartAt = Date.now();
       const t = e.target.closest('.ramo');
       if (!t) return;

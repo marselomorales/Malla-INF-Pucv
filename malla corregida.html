@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Malla Interactiva – Ing. (tooltips desktop + touch)</title>
+
+  <!-- Iconos desde CDN -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+  <style>
+    :root {
+      --bg-light: #eaf1f8;
+      --bg-dark: #1e1e1e;
+      --card-light: #ffffff;
+      --card-dark: #2a2a2a;
+      --ink-light: #111;
+      --ink-dark: #eee;
+
+      --accent: #3498db;
+      --accent-2: #2ecc71;
+
+      --programacion: #4a86e8;
+      --matematicas: #e06666;
+      --fisica: #6aa84f;
+      --ingenieria: #8e7cc3;
+      --humanidades: #f6b26b;
+      --optativos: #d5a6bd;
+      --fofu: #40E0D0;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+      background: var(--bg-light);
+      color: var(--ink-light);
+      min-height: 100vh;
+      transition: background-color .3s ease, color .3s ease;
+      padding: 24px;
+    }
+    body.active { background: var(--bg-dark); color: var(--ink-dark); }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+    header { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 1.8rem; line-height: 1.2; }
+
+    /* Toggle dark mode */
+    .dark-mode {
+      width: 64px; height: 32px; background: #dfdede; border-radius: 999px; display: flex; align-items: center;
+      cursor: pointer; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,.15); user-select: none;
+    }
+    body.active .dark-mode { background: #fff; box-shadow: 0 4px 20px rgba(255,255,255,.15); }
+    .dark-mode .circle {
+      position: absolute; top: 2px; left: 2px; width: 28px; height: 28px; border-radius: 50%;
+      display: grid; place-items: center; overflow: hidden; background: #fff;
+      transition: transform .35s ease, background-color .35s ease;
+    }
+    body.active .dark-mode .circle { transform: translateX(32px); background: #2a2a2c; }
+    .dark-mode .circle ion-icon { position: absolute; width: 22px; height: 22px; transition: transform .35s ease; }
+    .dark-mode .sun { color: #fcde5b; }
+    .dark-mode .moon { color: #fff; transform: translateY(-120%); }
+    body.active .dark-mode .sun { transform: translateY(120%); }
+    body.active .dark-mode .moon { transform: translateY(0); }
+
+    /* Stats + progress */
+    .progress-container { display:flex; flex-direction:column; align-items:center; gap:10px; margin: 8px 0 20px; }
+    .stats { width:100%; max-width: 980px; display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap; }
+    .stat-item {
+      flex: 1 1 180px; text-align:center; padding:10px 12px; border-radius:12px;
+      background: rgba(0,0,0,.05); font-weight: 600;
+    }
+    body.active .stat-item { background: rgba(255,255,255,.08); }
+
+    .progress { width:100%; max-width: 980px; height:22px; border-radius:12px; overflow:hidden; position:relative;
+      background:#cfd8dc; box-shadow: inset 0 0 3px rgba(0,0,0,.15); }
+    .progress-bar { height:100%; width:0%; background: linear-gradient(90deg, #4caf50, #8bc34a); transition: width .4s ease; position: relative; }
+    .progress-text { position:absolute; inset:0; display:grid; place-items:center; font-size:12px; font-weight:700; color:#000; text-shadow: 0 0 2px rgba(255,255,255,.8); pointer-events:none; }
+    body.active .progress-text { color:#fff; text-shadow: 0 0 2px rgba(0,0,0,.8); }
+
+    /* Legend */
+    .legend { display:flex; gap:14px 24px; flex-wrap:wrap; justify-content:center; font-size:14px; margin-bottom: 10px; }
+    .legend .cuadro { width:14px; height:14px; border-radius:3px; display:inline-block; vertical-align:middle; margin-right:6px; }
+    .lg-aprob { background:#98fb98; } .lg-disp { background:#ffe08a; } .lg-bloq { background:#ccc; }
+
+    /* Controls */
+    .controls { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin: 10px 0 18px; }
+    .btn {
+      display:inline-flex; align-items:center; gap:6px; padding:10px 14px; border:none; border-radius:10px; cursor:pointer;
+      background: var(--accent); color:#fff; font-weight:600; transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 12px rgba(0,0,0,.2); }
+    .btn:active { transform: translateY(0); background: #2b83bf; }
+    .btn.active { background: var(--accent-2); }
+
+    .search-container { width:100%; max-width:560px; margin: 0 auto 14px; position:relative; }
+    .search-container input {
+      width:100%; padding:12px 16px 12px 42px; border-radius:30px; border:1px solid #ccc; font-size:16px;
+      background:#fff; box-shadow: 0 2px 6px rgba(0,0,0,.08); color: inherit;
+    }
+    body.active .search-container input { background:#2a2a2a; border-color:#444; color:#eee; }
+    .search-container ion-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#777; }
+
+    /* Grid */
+    .grid { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; }
+    .semestre {
+      background: var(--card-light); color:inherit; padding:16px; border-radius:12px; min-width:260px; max-width:320px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.12); flex: 1 1 260px; transition: transform .25s ease;
+    }
+    body.active .semestre { background: var(--card-dark); box-shadow: 0 4px 20px rgba(255,255,255,.06); }
+    .semestre h3 { text-align:center; margin:0 0 10px; color:#34495e; border-bottom:2px solid #eee; padding-bottom:8px; }
+    body.active .semestre h3 { color:#90caf9; border-bottom-color:#444; }
+
+    .ramo {
+      margin: 8px 0; padding: 12px 10px; border-radius:8px; cursor:pointer; text-align:center; font-size:14px; position:relative;
+      border-left: 4px solid transparent; display:flex; flex-direction:column; justify-content:center; min-height:64px;
+      transition: transform .15s ease, box-shadow .15s ease; outline: none;
+    }
+    .ramo:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,.12); }
+    .ramo:focus { outline: 2px dashed currentColor; outline-offset: 2px; }
+    .ramo[data-area="programacion"] { border-left-color: var(--programacion); }
+    .ramo[data-area="matematicas"] { border-left-color: var(--matematicas); }
+    .ramo[data-area="fisica"] { border-left-color: var(--fisica); }
+    .ramo[data-area="ingenieria"] { border-left-color: var(--ingenieria); }
+    .ramo[data-area="humanidades"] { border-left-color: var(--humanidades); }
+    .ramo[data-area="optativos"] { border-left-color: var(--optativos); }
+    .ramo[data-area="fofu"] { border-left-color: var(--fofu); }
+
+    /* Tooltip SOLO CSS (desktop: hover/focus) */
+    .ramo:hover::after, .ramo:focus::after {
+      content: attr(data-tooltip);
+      position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
+      background: #333; color:#fff; padding: 8px 12px; border-radius: 8px; font-size: 12px;
+      white-space: pre-wrap; opacity:.98; pointer-events:none; z-index:9999; max-width: 320px; text-align:center;
+      box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    }
+
+    .ramo .ramo-nombre { font-weight:600; margin-bottom:4px; }
+    .ramo .ramo-detalles { display:flex; justify-content:space-between; font-size:12px; gap:8px; }
+    .ramo .ramo-sigla { opacity:.85; }
+    .ramo .ramo-creditos { font-weight:700; }
+
+    .bloqueado { background:#ccc; color:#555; cursor:not-allowed; }
+    .disponible { background:#ffe08a; color:#000; }
+    .aprobado { background:#98fb98; color:#000; }
+
+    .desbloqueado { animation: fadeInScale .35s ease forwards; opacity: 0; transform: scale(.97); }
+    @keyframes fadeInScale { to { opacity:1; transform: scale(1);} }
+
+    .retirado { animation: fadeOutScale .35s ease forwards; opacity:1; transform:scale(1); }
+    @keyframes fadeOutScale { to { opacity:0; transform:scale(.95);} }
+
+    .area-filter { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom: 10px; }
+    .area-btn {
+      padding: 6px 12px; border-radius: 20px; border: none; font-size: 12px; cursor:pointer; opacity: .8; transition: transform .15s ease, box-shadow .15s ease, opacity .15s;
+      color:#fff;
+    }
+    .area-btn.active { opacity: 1; transform: scale(1.05); box-shadow: 0 2px 5px rgba(0,0,0,.2); }
+    .area-btn[data-area="programacion"] { background: var(--programacion); }
+    .area-btn[data-area="matematicas"] { background: var(--matematicas); }
+    .area-btn[data-area="fisica"] { background: var(--fisica); }
+    .area-btn[data-area="ingenieria"] { background: var(--ingenieria); }
+    .area-btn[data-area="humanidades"] { background: var(--humanidades); color:#222; }
+    .area-btn[data-area="optativos"] { background: var(--optativos); color:#222; }
+    .area-btn[data-area="fofu"] { background: var(--fofu); color:#111; }
+
+    @media (max-width: 768px) {
+      .grid { flex-direction:column; align-items:center; }
+      .semestre { width:100%; max-width: 100%; }
+      header { flex-direction:column; text-align:center; }
+      .controls { flex-direction:column; }
+      .btn { width:100%; max-width: 340px; justify-content:center; }
+    }
+
+    .footer {
+      text-align:center; padding: 18px 0; margin-top: 24px; font-size:14px; color:#666;
+      border-top:1px solid #eee; transition: color .3s, border-color .3s;
+    }
+    body.active .footer { color:#aaa; border-top-color:#444; }
+    .footer a { color: var(--accent); text-decoration: none; }
+    body.active .footer a { color: #90caf9; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* Touch tooltip bubble */
+    #touch-tip {
+      position: fixed;
+      background: #333;
+      color: #fff;
+      font-size: 13px;
+      line-height: 1.2;
+      padding: 10px 12px;
+      border-radius: 10px;
+      box-shadow: 0 8px 18px rgba(0,0,0,.35);
+      z-index: 10000;
+      max-width: min(80vw, 360px);
+      display: none;
+      white-space: pre-wrap;
+      transform: translate(-50%, -8px);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Malla Interactiva — Ingeniería Informática</h1>
+      <div class="dark-mode" id="theme-toggle" aria-label="Cambiar tema" role="switch" aria-checked="false" tabindex="0">
+        <div class="circle">
+          <ion-icon class="sun" name="sunny"></ion-icon>
+          <ion-icon class="moon" name="moon"></ion-icon>
+        </div>
+      </div>
+    </header>
+
+    <div class="progress-container" aria-live="polite">
+      <div class="stats">
+        <div class="stat-item" id="total-ramos">Total ramos: 0</div>
+        <div class="stat-item" id="aprobados-ramos">Aprobados: 0</div>
+        <div class="stat-item" id="creditos-total">Créditos: 0/0</div>
+        <div class="stat-item" id="porcentaje">Progreso: 0%</div>
+      </div>
+      <div class="progress" aria-label="Progreso total">
+        <div class="progress-bar" id="barraProgreso">
+          <div class="progress-text" id="textoProgreso">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><span class="cuadro lg-aprob"></span> Aprobado</span>
+      <span><span class="cuadro lg-disp"></span> Disponible</span>
+      <span><span class="cuadro lg-bloq"></span> Bloqueado</span>
+    </div>
+
+    <div class="area-filter" id="area-filter">
+      <button class="area-btn" data-area="all">Todas</button>
+      <button class="area-btn" data-area="programacion">Programación</button>
+      <button class="area-btn" data-area="matematicas">Matemáticas</button>
+      <button class="area-btn" data-area="fisica">Física</button>
+      <button class="area-btn" data-area="ingenieria">Ingeniería</button>
+      <button class="area-btn" data-area="humanidades">Humanidades</button>
+      <button class="area-btn" data-area="optativos">Optativos</button>
+      <button class="area-btn" data-area="fofu">Fofus</button>
+    </div>
+
+    <div class="search-container">
+      <ion-icon name="search-outline"></ion-icon>
+      <input type="text" id="search-input" placeholder="Buscar por nombre o sigla…" aria-label="Buscar ramos">
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="btn-reset"><ion-icon name="refresh-outline"></ion-icon> Reiniciar Progreso</button>
+      <button class="btn" id="toggle-disponibles"><ion-icon name="eye-outline"></ion-icon> Solo Disponibles</button>
+    </div>
+
+    <div class="grid" id="malla" role="list"></div>
+  </div>
+
+  <div class="footer">
+    Desarrollado por Marcelo Morales — <a href="https://www.instagram.com/controlnotas" target="_blank" rel="noopener"> @controlnotas</a>
+  </div>
+
+  <!-- Touch tooltip bubble -->
+  <div id="touch-tip" role="status" aria-live="polite"></div>
+
+  <script>
+    // ========= Utilidades =========
+    const normalizarTexto = (str) => (str || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    // ========= Modo Oscuro persistente =========
+    const toggle = document.getElementById("theme-toggle");
+    const body = document.body;
+    const applyTheme = (mode) => {
+      if (mode === "dark") body.classList.add("active"); else body.classList.remove("active");
+      toggle?.setAttribute("aria-checked", mode === "dark" ? "true" : "false");
+    };
+    applyTheme(localStorage.getItem("modo") || "light");
+
+    const swapTheme = () => {
+      const isDark = body.classList.toggle("active");
+      const modo = isDark ? "dark" : "light";
+      localStorage.setItem("modo", modo);
+      toggle?.setAttribute("aria-checked", isDark ? "true" : "false");
+    };
+    toggle?.addEventListener("click", swapTheme);
+    toggle?.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); swapTheme(); } });
+
+    // ========= Datos =========
+    const cursosRaw = [
+      // Sem 1
+      {sem:1, sigla:"INF1211", nombre:"Fundamentos De Algoritmos", creditos:4, area:"programacion", prereqs:[]},
+      {sem:1, sigla:"INF1212", nombre:"Introducción A La Ingeniería Informática", creditos:3, area:"ingenieria", prereqs:[]},
+      {sem:1, sigla:"INF1413", nombre:"Bienestar Y Aprendizaje Universitario", creditos:2, area:"humanidades", prereqs:[]},
+      {sem:1, sigla:"MAT1001", nombre:"Fundamentos De Matemáticas Para Ingeniería", creditos:6, area:"matematicas", prereqs:[]},
+      // Sem 2
+      {sem:2, sigla:"FIN100-14", nombre:"Desarrollo Integral Y Comunicación Para Ingeniería", creditos:3, area:"humanidades", prereqs:[]},
+      {sem:2, sigla:"INF1214", nombre:"Fundamentos De Programación", creditos:4, area:"programacion", prereqs:["INF1211"]},
+      {sem:2, sigla:"MAT1002", nombre:"Calculo Diferencial E Integral", creditos:6, area:"matematicas", prereqs:["MAT1001"]},
+      {sem:2, sigla:"MAT1004", nombre:"Algebra Lineal", creditos:4, area:"matematicas", prereqs:["MAT1001"]},
+      {sem:2, sigla:"FF1", nombre:"Formación Fundamental 1", creditos:2, area:"fofu", prereqs:[]},
+      // Sem 3
+      {sem:3, sigla:"FIS1002", nombre:"Física Para Ingeniería", creditos:5, area:"fisica", prereqs:["MAT1001"]},
+      {sem:3, sigla:"INF2121", nombre:"Estadística Computacional", creditos:4, area:"matematicas", prereqs:[]},
+      {sem:3, sigla:"INF2223", nombre:"Estructura De Datos", creditos:4, area:"programacion", prereqs:["INF1214"]},
+      {sem:3, sigla:"INF2322", nombre:"Hardware Y Sistemas Operativos", creditos:4, area:"ingenieria", prereqs:["INF1214"]},
+      {sem:3, sigla:"ICR010", nombre:"Antropología Cristiana", creditos:2, area:"fofu", prereqs:[]},
+      {sem:3, sigla:"FF2", nombre:"Formación Fundamental 2", creditos:2, area:"fofu", prereqs:[]},
+      // Sem 4
+      {sem:4, sigla:"INF2235", nombre:"Base De Datos", creditos:4, area:"programacion", prereqs:["INF1214"]},
+      {sem:4, sigla:"INF2236", nombre:"Programación Avanzada", creditos:4, area:"programacion", prereqs:["INF2223"]},
+      {sem:4, sigla:"INF2237", nombre:"Ingeniería De Software", creditos:4, area:"ingenieria", prereqs:["INF2223"]},
+      {sem:4, sigla:"INF2324", nombre:"Redes De Computadores", creditos:4, area:"ingenieria", prereqs:["INF2322"]},
+      {sem:4, sigla:"ING9001", nombre:"Ingles 1", creditos:2, area:"humanidades", prereqs:[]},
+      {sem:4, sigla:"ICR020", nombre:"Ética Cristiana", creditos:2, area:"fofu", prereqs:[]},
+      // Sem 5
+      {sem:5, sigla:"INF3132", nombre:"Economía Y Finanzas", creditos:3, area:"ingenieria", prereqs:[]},
+      {sem:5, sigla:"INF3233", nombre:"Inteligencia Artificial", creditos:4, area:"programacion", prereqs:["INF2236"]},
+      {sem:5, sigla:"INF3234", nombre:"Modelamiento De Software", creditos:4, area:"ingenieria", prereqs:["INF2235"]},
+      {sem:5, sigla:"INF3235", nombre:"Ingeniería De Requerimientos", creditos:3, area:"ingenieria", prereqs:["INF2237"]},
+      {sem:5, sigla:"ING9002", nombre:"Ingles 2", creditos:2, area:"humanidades", prereqs:["ING9001"]},
+      // Sem 6
+      {sem:6, sigla:"INF3136", nombre:"Optimización", creditos:4, area:"matematicas", prereqs:[]},
+      {sem:6, sigla:"INF3245", nombre:"Ingeniería Web Y Móvil", creditos:4, area:"ingenieria", prereqs:["INF3234"]},
+      {sem:6, sigla:"INF3246", nombre:"Experiencia Del Usuario", creditos:3, area:"ingenieria", prereqs:["INF3235"]},
+      {sem:6, sigla:"INF3541", nombre:"Taller De Base De Datos", creditos:3, area:"programacion", prereqs:["INF2235"]},
+      {sem:6, sigla:"ING9003", nombre:"Ingles 3", creditos:2, area:"humanidades", prereqs:["ING9002"]},
+      {sem:6, sigla:"FF3", nombre:"Formación Fundamental 3", creditos:2, area:"fofu", prereqs:[]},
+      {sem:6, sigla:"OPT1", nombre:"Optativo I", creditos:4, area:"optativos", prereqs:[]},
+      // Sem 7
+      {sem:7, sigla:"INF4353", nombre:"Ciberseguridad", creditos:4, area:"ingenieria", prereqs:["INF2324"]},
+      {sem:7, sigla:"INF4457", nombre:"Tecnologías Emergentes", creditos:4, area:"ingenieria", prereqs:[]},
+      {sem:7, sigla:"INF4552", nombre:"Taller De Ingeniería De Software", creditos:4, area:"ingenieria", prereqs:["INF2237"]},
+      {sem:7, sigla:"INF4556", nombre:"Seminario De Titulo", creditos:4, area:"ingenieria", prereqs:["INF3136","INF3541","INF3245","INF3246","INF3233","INF2324","INF1214","INF1212","FIS1002","MAT1004","MAT1002"]},
+      {sem:7, sigla:"ING9004", nombre:"Ingles 4", creditos:2, area:"humanidades", prereqs:["ING9003"]},
+      {sem:7, sigla:"OPT2", nombre:"Optativo II", creditos:4, area:"optativos", prereqs:[]},
+      // Sem 8
+      {sem:8, sigla:"INF4458", nombre:"Negocios, Innovación y Emprendimiento", creditos:3, area:"ingenieria", prereqs:[]},
+      {sem:8, sigla:"INF4459", nombre:"Legislación, Ética y Tecnología", creditos:3, area:"humanidades", prereqs:[]},
+      {sem:8, sigla:"OPT3", nombre:"Optativo III", creditos:4, area:"optativos", prereqs:[]},
+      {sem:8, sigla:"INF4560", nombre:"Proyecto De Titulo", creditos:10, area:"ingenieria", prereqs:["INF4556"]},
+    ];
+
+    // ========= Índices y estructuras =========
+    const siglaToNombre = new Map(cursosRaw.map(c => [c.sigla, c.nombre]));
+
+    const ramos = {};              // nombre -> {semestre, area, sigla, abre:[]}
+    const creditosRamos = {};      // nombre -> créditos
+    const prereqsPorNombre = {};   // nombre -> [nombres prereq]
+
+    for (const c of cursosRaw) {
+      ramos[c.nombre] = { semestre: c.sem, area: c.area, sigla: c.sigla, abre: [] };
+      creditosRamos[c.nombre] = c.creditos ?? 4;
+      prereqsPorNombre[c.nombre] = (c.prereqs || []).map(sig => siglaToNombre.get(sig)).filter(Boolean);
+    }
+    for (const [nombre, lista] of Object.entries(prereqsPorNombre)) {
+      for (const p of lista) if (ramos[p]) ramos[p].abre.push(nombre);
+    }
+
+    const porSemestre = {};
+    for (const [nombre, info] of Object.entries(ramos)) {
+      if (!porSemestre[info.semestre]) porSemestre[info.semestre] = [];
+      porSemestre[info.semestre].push(nombre);
+    }
+    const maxSemestre = Math.max(...Object.values(ramos).map(r => r.semestre));
+
+    // ========= Persistencia por SIGLA + Firma malla =========
+    const firmaMalla = JSON.stringify(cursosRaw.map(c => c.sigla).sort());
+    const firmaGuardada = localStorage.getItem('firma_malla');
+    if (firmaGuardada && firmaGuardada !== firmaMalla) {
+      localStorage.removeItem('ramos_aprobados_siglas');
+    }
+    localStorage.setItem('firma_malla', firmaMalla);
+
+    let aprobadasSiglas = JSON.parse(localStorage.getItem('ramos_aprobados_siglas') || '[]');
+    const setSiglasValidas = new Set(cursosRaw.map(c => c.sigla));
+    aprobadasSiglas = aprobadasSiglas.filter(s => setSiglasValidas.has(s));
+    localStorage.setItem('ramos_aprobados_siglas', JSON.stringify(aprobadasSiglas));
+
+    const aprobadosNombres = () => aprobadasSiglas.map(s => siglaToNombre.get(s)).filter(Boolean);
+    const aprobadoPorNombre = new Set(aprobadosNombres());
+
+    // ========= Lógica App =========
+    const malla = document.getElementById('malla');
+    const estadoAnterior = new Map();
+    let areaSeleccionada = "all";
+    let busqueda = "";
+    let mostrarSoloDisponibles = false;
+
+    const calcularCreditos = () => {
+      let total = 0, completados = 0;
+      for (const [nombre] of Object.entries(ramos)) {
+        const c = creditosRamos[nombre] ?? 4;
+        total += c;
+        if (aprobadoPorNombre.has(nombre)) completados += c;
+      }
+      const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
+      return { total, completados, porcentaje };
+    };
+
+    const prerequisitosDe = (nombre) => prereqsPorNombre[nombre] || [];
+    const estaDisponible = (nombre) => {
+      const info = ramos[nombre]; if (!info) return false;
+      if (info.semestre === 1) return true;
+      const prere = prerequisitosDe(nombre);
+      return prere.every(p => aprobadoPorNombre.has(p));
+    };
+
+    const obtenerTodosDependientes = (ramoBase) => {
+      const visit = new Set();
+      const dfs = (n) => {
+        for (const hijo of (ramos[n]?.abre || [])) {
+          if (!visit.has(hijo)) { visit.add(hijo); dfs(hijo); }
+        }
+      };
+      dfs(ramoBase);
+      return [...visit];
+    };
+
+    const aprobar = (ramoNombre) => {
+      const sigla = ramos[ramoNombre]?.sigla;
+      if (!sigla) return;
+
+      if (aprobadoPorNombre.has(ramoNombre)) {
+        const dep = obtenerTodosDependientes(ramoNombre);
+        const aEliminar = [ramoNombre, ...dep];
+        $$('.ramo').forEach(el => {
+          const n = el.querySelector('.ramo-nombre')?.textContent;
+          if (n && aEliminar.includes(n)) el.classList.add('retirado');
+        });
+        const depSiglas = aEliminar.map(n => ramos[n]?.sigla).filter(Boolean);
+        aprobadasSiglas = aprobadasSiglas.filter(s => !depSiglas.includes(s));
+        localStorage.setItem('ramos_aprobados_siglas', JSON.stringify(aprobadasSiglas));
+        aprobadoPorNombre.clear(); aprobadosNombres().forEach(n => aprobadoPorNombre.add(n));
+        render();
+      } else {
+        if (estaDisponible(ramoNombre)) {
+          if (!aprobadasSiglas.includes(sigla)) aprobadasSiglas.push(sigla);
+          localStorage.setItem('ramos_aprobados_siglas', JSON.stringify(aprobadasSiglas));
+          aprobadoPorNombre.add(ramoNombre);
+          render();
+        } else {
+          alert('No puedes aprobar este ramo hasta completar sus prerrequisitos');
+        }
+      }
+    };
+
+    const resetear = () => {
+      if (confirm("¿Estás seguro de reiniciar todo el progreso?")) {
+        localStorage.removeItem('ramos_aprobados_siglas');
+        aprobadasSiglas = [];
+        aprobadoPorNombre.clear();
+        render();
+      }
+    };
+
+    // ========= Render =========
+    const render = () => {
+      const totalRamos = Object.keys(ramos).length;
+      const aprobadosList = aprobadosNombres();
+      const { total: creditosTotal, completados: creditosAprobados, porcentaje } = calcularCreditos();
+
+      document.getElementById('total-ramos').textContent = `Total ramos: ${totalRamos}`;
+      document.getElementById('aprobados-ramos').textContent = `Aprobados: ${aprobadosList.length}`;
+      document.getElementById('creditos-total').textContent = `Créditos: ${creditosAprobados}/${creditosTotal}`;
+      document.getElementById('porcentaje').textContent = `Progreso: ${porcentaje}%`;
+      const barra = document.getElementById('barraProgreso'); const textoBarra = document.getElementById('textoProgreso');
+      barra.style.width = porcentaje + '%'; textoBarra.textContent = porcentaje + '%';
+
+      malla.innerHTML = "";
+      let semestresRenderizados = 0;
+      const nuevoEstado = new Map();
+
+      for (let sem = 1; sem <= maxSemestre; sem++) {
+        const ramosSem = (porSemestre[sem] || []).filter(ramo => {
+          if (areaSeleccionada !== "all" && areaSeleccionada !== "none") {
+            if (ramos[ramo].area !== areaSeleccionada) return false;
+          }
+          if (busqueda) {
+            const b = normalizarTexto(busqueda);
+            const n = normalizarTexto(ramo);
+            const s = normalizarTexto(ramos[ramo].sigla || '');
+            if (!n.includes(b) && !s.includes(b)) return false;
+          }
+          if (mostrarSoloDisponibles) {
+            if (!aprobadoPorNombre.has(ramo) && !estaDisponible(ramo)) return false;
+          }
+          return true;
+        });
+
+        if (!ramosSem.length) continue;
+        const cont = document.createElement('div');
+        cont.className = 'semestre';
+        const title = document.createElement('h3');
+        title.textContent = `${sem}° Semestre`;
+        cont.appendChild(title);
+
+        ramosSem.forEach(ramo => {
+          const info = ramos[ramo];
+          const div = document.createElement('div');
+          div.className = 'ramo';
+          div.dataset.area = info.area;
+          div.dataset.creditos = creditosRamos[ramo] ?? 4;
+          div.setAttribute('role', 'listitem');
+          div.tabIndex = 0;
+
+          const contenido = document.createElement('div');
+          const nombreEl = document.createElement('div');
+          nombreEl.className = 'ramo-nombre';
+          nombreEl.textContent = ramo;
+          contenido.appendChild(nombreEl);
+
+          const detalles = document.createElement('div');
+          detalles.className = 'ramo-detalles';
+          const siglaEl = document.createElement('span');
+          siglaEl.className = 'ramo-sigla';
+          siglaEl.textContent = info.sigla || 'SIGLA';
+          const creditosEl = document.createElement('span');
+          creditosEl.className = 'ramo-creditos';
+          creditosEl.textContent = `${creditosRamos[ramo] ?? 4} créditos`;
+          detalles.appendChild(siglaEl); detalles.appendChild(creditosEl);
+          contenido.appendChild(detalles);
+          div.appendChild(contenido);
+
+          const prere = prerequisitosDe(ramo);
+          const desbloqueado = prere.every(p => aprobadoPorNombre.has(p));
+          const estadoKey = `${sem}:${ramo}`;
+          nuevoEstado.set(estadoKey, desbloqueado);
+
+          const setTooltip = (txt) => { div.setAttribute('data-tooltip', txt); };
+
+          if (aprobadoPorNombre.has(ramo)) {
+            div.classList.add('aprobado');
+            setTooltip(`🟢 Aprobado (${creditosRamos[ramo] ?? 4} créditos)\nToca para desmarcar ❌`);
+            div.onclick = () => aprobar(ramo);
+            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
+          } else if (estaDisponible(ramo)) {
+            div.classList.add('disponible');
+            if (!estadoAnterior.get(estadoKey)) { div.classList.add('desbloqueado'); void div.offsetWidth; }
+            setTooltip(`🟡 Disponible (${creditosRamos[ramo] ?? 4} créditos)\nToca para aprobar ✅`);
+            div.onclick = () => aprobar(ramo);
+            div.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aprobar(ramo); } };
+          } else {
+            div.classList.add('bloqueado');
+            const faltantes = prere.filter(p => !aprobadoPorNombre.has(p));
+            setTooltip(`🔒 Bloqueado (${creditosRamos[ramo] ?? 4} créditos)\nRequiere: ${faltantes.join(', ') || 'Ninguno'}`);
+          }
+
+          cont.appendChild(div);
+        });
+
+        malla.appendChild(cont);
+        semestresRenderizados++;
+      }
+
+      if (semestresRenderizados === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'no-results';
+        noResults.textContent = 'No se encontraron ramos que coincidan con la búsqueda';
+        malla.appendChild(noResults);
+      }
+
+      estadoAnterior.clear();
+      nuevoEstado.forEach((v,k) => estadoAnterior.set(k, v));
+
+      // Re-wire touch tooltip handlers after each render
+      setupTouchTooltips();
+    };
+
+    // ========= Touch tooltips (long-press) =========
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const tip = document.getElementById('touch-tip');
+    let pressTimer = null;
+    let pressTarget = null;
+    let startX = 0, startY = 0;
+    const MOVE_TOL = 12; // px
+    const LONG_MS = 500; // ms to trigger
+
+    function showTipFor(target) {
+      const txt = target.getAttribute('data-tooltip');
+      if (!txt) return;
+      tip.textContent = txt;
+      tip.style.display = 'block';
+      positionTip(target);
+      clearTimeout(tip._hideT); tip._hideT = setTimeout(hideTip, 2500);
+    }
+    function hideTip() { tip.style.display = 'none'; tip.textContent = ''; }
+    function positionTip(target) {
+      const rect = target.getBoundingClientRect();
+      const tipRect = tip.getBoundingClientRect();
+      let x = rect.left + rect.width/2;
+      let y = rect.top - 8; // above by default
+      if (rect.top - tipRect.height - 16 < 0) {
+        y = rect.bottom + tipRect.height/2 + 8;
+        tip.style.transform = 'translate(-50%, -8px)';
+      } else {
+        tip.style.transform = 'translate(-50%, -8px)';
+      }
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    }
+    function clearPress() { clearTimeout(pressTimer); pressTimer = null; pressTarget = null; }
+    function onTouchStart(e) {
+      const t = e.target.closest('.ramo');
+      if (!t) return;
+      pressTarget = t;
+      const touch = e.changedTouches[0];
+      startX = touch.clientX; startY = touch.clientY;
+      clearPress();
+      pressTimer = setTimeout(() => { showTipFor(t); }, LONG_MS);
+    }
+    function onTouchMove(e) {
+      if (!pressTimer) return;
+      const touch = e.changedTouches[0];
+      if (Math.abs(touch.clientX - startX) > MOVE_TOL || Math.abs(touch.clientY - startY) > MOVE_TOL) {
+        clearPress();
+      }
+    }
+    function onTouchEnd(e) {
+      if (pressTimer) { clearPress(); }
+    }
+    function onScrollOrOutsideTouch() { hideTip(); }
+
+    function setupTouchTooltips() {
+      if (!isTouch) return;
+      document.removeEventListener('touchstart', onTouchStart, {passive:true});
+      document.removeEventListener('touchmove', onTouchMove, {passive:true});
+      document.removeEventListener('touchend', onTouchEnd, {passive:true});
+      document.removeEventListener('scroll', onScrollOrOutsideTouch, true);
+      document.removeEventListener('touchstart', (ev)=>{}, true);
+
+      document.addEventListener('touchstart', onTouchStart, {passive:true});
+      document.addEventListener('touchmove', onTouchMove, {passive:true});
+      document.addEventListener('touchend', onTouchEnd, {passive:true});
+      document.addEventListener('scroll', onScrollOrOutsideTouch, true);
+      document.addEventListener('touchstart', (e)=>{
+        if (!e.target.closest('.ramo')) hideTip();
+      }, {passive:true, capture:true});
+      window.addEventListener('resize', hideTip);
+      window.addEventListener('orientationchange', hideTip);
+    }
+
+    // ========= Listeners =========
+    document.querySelectorAll('.area-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('active') && btn.dataset.area === areaSeleccionada) {
+          btn.classList.remove('active'); areaSeleccionada = "none";
+        } else {
+          document.querySelectorAll('.area-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active'); areaSeleccionada = btn.dataset.area;
+        }
+        render();
+      });
+    });
+
+    let debounceTimer = null;
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      const v = e.target.value;
+      debounceTimer = setTimeout(() => { busqueda = v; render(); }, 120);
+    });
+
+    document.getElementById('toggle-disponibles').addEventListener('click', () => {
+      mostrarSoloDisponibles = !mostrarSoloDisponibles;
+      const boton = document.getElementById('toggle-disponibles');
+      if (mostrarSoloDisponibles) {
+        boton.classList.add('active');
+        boton.innerHTML = '<ion-icon name="eye-off-outline"></ion-icon> Mostrar Todos';
+      } else {
+        boton.classList.remove('active');
+        boton.innerHTML = '<ion-icon name="eye-outline"></ion-icon> Solo Disponibles';
+      }
+      render();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', resetear);
+
+    // Primera pinta
+    render();
+  </script>
+</body>
+</html>

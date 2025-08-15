@@ -132,7 +132,7 @@
     .ramo[data-area="fofu"] { border-left-color: var(--fofu); }
 
     /* Tooltip SOLO CSS (desktop: hover/focus) */
-    .ramo:hover::after, .ramo:focus::after {
+    .ramo:hover::after, .ramo:focus-visible::after {
       content: attr(data-tooltip);
       position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%);
       background: #333; color:#fff; padding: 8px 12px; border-radius: 8px; font-size: 12px;
@@ -227,10 +227,10 @@
 
     /* Avoid CSS+JS tooltip duplication */
     @media (hover: hover) and (pointer: fine) {
-      html[data-jstip="1"] .ramo:hover::after,
-      html[data-jstip="1"] .ramo:focus::after,
-      html[data-touch="1"] .ramo:hover::after { content: none !important; }
-    }
+  html[data-jstip="1"] .ramo:hover::after,
+  html[data-jstip="1"] .ramo:focus-visible::after,
+  html[data-touch="1"] .ramo:hover::after { content: none !important; }
+}
   </style>
 </head>
 <body>
@@ -759,6 +759,19 @@
     });
 
     document.getElementById('btn-reset').addEventListener('click', resetear);
+
+    // Anti-sticky en desktop: si haces click en un ramo bloqueado, quita el focus
+const isDesktopFine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+if (isDesktopFine) {
+  document.addEventListener('mousedown', (e) => {
+    const el = e.target.closest('.ramo.bloqueado');
+    if (el) {
+      // Permite hover normal; evita que el focus lo “fije”. No toca teclado.
+      requestAnimationFrame(() => el.blur());
+    }
+  }, true);
+}
+
 
     // Primera pinta
     render();
